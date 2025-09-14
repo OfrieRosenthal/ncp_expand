@@ -1,0 +1,2 @@
+# Graph: ./datasets/facebook/facebook_random.edgelist -> facebook_random facebook_random A=0.001, K=1000-1.5-100M, Cvr=10, SzFrc=0.001 G(4035, 96230)
+#N_inside	E_inside	E_across	Conductance	Expansion	IntDensity	CutRatio	NormCut	Mx_FracDegOut	Avg_FDO	Median_FDO	90Pct_FDO	Flake_FDO	Volume	ExpVolume	Modularity	ModRatio

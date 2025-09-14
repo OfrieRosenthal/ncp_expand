@@ -220,7 +220,31 @@ void TLocClust::PlotNCP(const PUNGraph& Graph, const TStr& FNm, const TStr Desc,
   const double Alpha = 0.001, KFac = 1.5, SizeFrac = 0.001;
   //const int KMin = 2, KMax = Mega(100), Coverage = 10;
   TLocClustStat ClusStat1(Alpha, KMin, KMax, KFac, Coverage, SizeFrac);
+  // ClusStat1.Run(Graph, false, PlotBoltzman, SaveTxtStat);
   ClusStat1.Run(Graph, false, PlotBoltzman, SaveTxtStat);
+ // --- NEW: save best clusters including node IDs ---
+    const TStr ClustFNm = TStr::Fmt("ncp.%s.clusters.tab", FNm.CStr());
+    FILE* F = fopen(ClustFNm.CStr(), "wt");
+    fprintf(F, "#Size\tPhi\tNodes\n");
+
+    for (int i = 0; i < ClusStat1.BestCutH.Len(); i++) {
+        const TLocClustStat::TCutInfo& Cut = ClusStat1.BestCutH[i];
+
+        // Ensure node IDs are populated
+        // if (Cut.CutNIdV.Len() == 0) {
+        //     printf("Warning: BestCutH[%d] has empty node vector!\n", i);
+        // }
+
+        fprintf(F, "%d\t%f\t", Cut.GetNodes(), Cut.GetPhi());
+
+        for (int n = 0; n < Cut.CutNIdV.Len(); n++) {
+            fprintf(F, "%d ", Cut.CutNIdV[n]()); // output node ID as int
+        }
+        fprintf(F, "\n");
+    }
+    fclose(F);
+    // --- END NEW PART ---
+  
   if (BagOfWhiskers) { ClusStat1.AddBagOfWhiskers(); }
   TLocClustStat ClusStat2(Alpha, KMin, KMax, KFac, Coverage, SizeFrac);
   ClusStat1.ImposeNCP(ClusStat2, FNm, Desc, "ORIGINAL", "REWIRED"); // plot before rewiring
@@ -316,13 +340,13 @@ void TLocClustStat::Run(const PUNGraph& _Graph, const bool& SaveAllSweeps, const
   bool NextDone=false;
   if (SaveBestNodesAtK) { // fill buckets (only store nodes in clusters for sizes in SizeBucketSet)
     SizeBucketSet.Clr();
-    double PrevBPos = 1, BPos = 1;
-    while (BPos <= Mega(100)) {
-      PrevBPos = (uint) floor(BPos);
-      BPos *= BinFactor;
-      if (floor(BPos) == PrevBPos) { BPos = PrevBPos + 1; }
-      SizeBucketSet.AddKey(int(floor(BPos) - 1));
-    }
+    // double PrevBPos = 1, BPos = 1;
+    // while (BPos <= Mega(100)) {
+    //   PrevBPos = (uint) floor(BPos);
+    //   BPos *= BinFactor;
+    //   if (floor(BPos) == PrevBPos) { BPos = PrevBPos + 1; }
+    //   SizeBucketSet.AddKey(int(floor(BPos) - 1));
+    // }
   }
   for (int K = KMin, cnt=1; K < KMax; K = int(KFac * double(K))+1, cnt++) {
     if (K == prevK) { K++; } prevK = K;
@@ -367,12 +391,28 @@ void TLocClustStat::Run(const PUNGraph& _Graph, const bool& SaveAllSweeps, const
         //bool TAKE=false;  if (! BestCutH.IsKey(size)) { TAKE=true; }
         //else { BestCutH.GetDat(size).GetFracDegOut(Graph, MxFrac, AvgFrac, MedianFrac, Pct9Frac, Flake);  if (MxFrac >= phi) { TAKE = true; } }
         // if (TAKE) {
-        if (! BestCutH.IsKey(size) || BestCutH.GetDat(size).GetPhi() >= phi) { //new best cut (size, edges inside and nodes)
-          BestCutH.AddDat(size, TCutInfo(size, edges, cut));  // for every size store best cut (NIds inside the cut)
-          if (SaveBestNodesAtK) { // store node ids in best community for each size k
-            if (! SizeBucketSet.Empty() && ! SizeBucketSet.IsKey(size)) { continue; } // only save best clusters at SizeBucketSet
-            Clust.GetNIdV().GetSubValV(0, size-1, BestCutH.GetDat(size).CutNIdV); }
+        
+        //////////// OR commented out
+        // if (! BestCutH.IsKey(size) || BestCutH.GetDat(size).GetPhi() >= phi) { //new best cut (size, edges inside and nodes)
+        //   BestCutH.AddDat(size, TCutInfo(size, edges, cut));  // for every size store best cut (NIds inside the cut)
+        //   if (SaveBestNodesAtK) { // store node ids in best community for each size k
+        //     if (! SizeBucketSet.Empty() && ! SizeBucketSet.IsKey(size)) { continue; } // only save best clusters at SizeBucketSet
+        //     Clust.GetNIdV().GetSubValV(0, size-1, BestCutH.GetDat(size).CutNIdV); }
+        // }
+        ////////// until here, and added : 
+        if (! BestCutH.IsKey(size) || BestCutH.GetDat(size).GetPhi() >= phi) {
+          // update stored best cut info for this size
+          BestCutH.AddDat(size, TCutInfo(size, edges, cut));
+
+          // If user requested saving node lists, store them for every best-cut size.
+          // NOTE: previously the code only saved nodes for sizes in SizeBucketSet.
+          // Removing that filter will make CutNIdV be filled for all sizes (more memory).
+          // if (SaveBestNodesAtK) {
+            Clust.GetNIdV().GetSubValV(0, size-1, BestCutH.GetDat(size).CutNIdV);
+          // }
         }
+        /////// until here
+
         if (SaveAllCond) { // for every size store all conductances
           SizePhiH.AddDat(size).Add(phi); }
       }
@@ -707,7 +747,7 @@ void TLocClustStat::PlotBestClustDens(TStr OutFNm, TStr Desc) const {
   GP.AddCmd("set logscale xyy2 10");
   GP.AddCmd("set y2label \"Conductance\"");
   GP.SavePng();
-  system(TStr(TStr("replace_all.py cutEdges.")+OutFNm+".plt \"title \\\"Conductance\" \"axis x1y2 title \\\"Conductance\"").CStr());
+  // system(TStr(TStr("replace_all.py cutEdges.")+OutFNm+".plt \"title \\\"Conductance\" \"axis x1y2 title \\\"Conductance\"").CStr());
   GP.RunGnuPlot();
 }
 
