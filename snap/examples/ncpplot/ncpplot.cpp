@@ -1,5 +1,11 @@
 #include "stdafx.h"
 #include "ncp.h"
+#include <vector>
+#include <queue>
+#include <utility>
+#include <fstream>
+#include "Snap.h"
+#include <cstdio>
 
 // --- Helper: get cluster nodes for a given target size ---
 TVec<TInt> GetClusterNodesBySize(const PUNGraph& Graph, double Alpha,
@@ -23,25 +29,82 @@ TVec<TInt> GetClusterNodesBySize(const PUNGraph& Graph, double Alpha,
     return OutCluster;
 }
 
+// Comparator must be outside the function
+struct ClusterCmp {
+    bool operator()(const std::pair<double,TIntV>& a, const std::pair<double,TIntV>& b) const {
+        return a.first < b.first; // smallest phi survives
+    }
+};
+
 void SaveClustersToFile(const TLocClustStat& ClusStat, const TStr& OutFNm) {
-    const TStr ClustFNm = TStr::Fmt("ncp.%s.clusters.tab", OutFNm.CStr());
+    const TStr ClustFNm = TStr::Fmt("ncp.%s.perbin.clusters.tab", OutFNm.CStr());
     FILE* F = fopen(ClustFNm.CStr(), "wt");
-    fprintf(F, "#Size\tPhi\tNodes\n");
+    fprintf(F, "#Bin\tSize\tPhi\tNodes\n");
 
+    std::vector<std::pair<int,int> > SizeBins;
+    SizeBins.push_back(std::make_pair(1,10));
+    SizeBins.push_back(std::make_pair(11,50));
+    SizeBins.push_back(std::make_pair(51,100));
+    SizeBins.push_back(std::make_pair(101,500));
+    SizeBins.push_back(std::make_pair(501,1000));
+    SizeBins.push_back(std::make_pair(1001,5000));
+    SizeBins.push_back(std::make_pair(5001,INT_MAX));
+
+    const int TopNPerBin = 20;
+
+    typedef std::priority_queue<
+        std::pair<double,TIntV>,
+        std::vector<std::pair<double,TIntV> >,
+        ClusterCmp
+    > ClusterHeap;
+
+    std::vector<ClusterHeap> BinHeaps(SizeBins.size());
+
+    // --- process all clusters ---
     for (int i = 0; i < ClusStat.BestCutH.Len(); i++) {
-        const TLocClustStat::TCutInfo& Cut = ClusStat.BestCutH[i];  // ✅ access value directly
-        if (Cut.CutNIdV.Len() == 0) continue; // skip empty clusters
+        const TLocClustStat::TCutInfo& Cut = ClusStat.BestCutH[i];
+        int sz = Cut.CutNIdV.Len();
+        double phi = Cut.GetPhi();
+        if (sz == 0) continue;
 
-        fprintf(F, "%d\t%f\t", (int)Cut.Nodes, Cut.GetPhi());
-        for (int n = 0; n < Cut.CutNIdV.Len(); n++) {
-            fprintf(F, "%d ", (int)Cut.CutNIdV[n]);  // ✅ cast TInt → int
+        // find bin
+        for (size_t b = 0; b < SizeBins.size(); b++) {
+            if (sz >= SizeBins[b].first && sz <= SizeBins[b].second) {
+                ClusterHeap& heap = BinHeaps[b];
+                if ((int)heap.size() < TopNPerBin) {
+                    heap.push(std::make_pair(phi, Cut.CutNIdV));
+                } else if (phi < heap.top().first) {
+                    heap.pop();
+                    heap.push(std::make_pair(phi, Cut.CutNIdV));
+                }
+                break;
+            }
         }
-        fprintf(F, "\n");
+    }
+
+    // --- dump results ---
+    for (size_t b=0; b<SizeBins.size(); b++) {
+        ClusterHeap heapCopy = BinHeaps[b]; // copy to pop
+        while (!heapCopy.empty()) {
+            const std::pair<double,TIntV>& cluster = heapCopy.top();
+            double phi = cluster.first;
+            const TIntV& NIdV = cluster.second;
+
+            fprintf(F, "[%d-%d]\t%d\t%f\t",
+                SizeBins[b].first, SizeBins[b].second, NIdV.Len(), phi);
+            for (int n=0; n<NIdV.Len(); n++) {
+                fprintf(F, "%d ", (int)NIdV[n]);
+            }
+            fprintf(F, "\n");
+            heapCopy.pop();
+        }
     }
 
     fclose(F);
     printf("Clusters saved to: %s\n", ClustFNm.CStr());
 }
+
+
 
 
 int main(int argc, char* argv[]) {

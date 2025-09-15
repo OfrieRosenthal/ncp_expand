@@ -1,5 +1,5 @@
 #
-# Graph: ./datasets/facebook/facebook_random.edgelist -> facebook_random facebook_random. A=0.001, K=1000-1.5-100M, Cvr=10, SzFrc=0.001 G(4035, 96230) (Sun Sep 14 17:33:08 2025)
+# Graph: ./datasets/facebook/facebook_random.edgelist -> facebook_random facebook_random. A=0.001, K=1000-1.5-100M, Cvr=10, SzFrc=0.001 G(4035, 96230) (Mon Sep 15 14:45:40 2025)
 #
 
 set title "Graph: ./datasets/facebook/facebook_random.edgelist -> facebook_random facebook_random. A=0.001, K=1000-1.5-100M, Cvr=10, SzFrc=0.001 G(4035, 96230)"
