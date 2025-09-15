@@ -28,19 +28,26 @@ TVec<TInt> GetClusterNodesBySize(const PUNGraph& Graph, double Alpha,
 
     return OutCluster;
 }
+// Cluster info struct
+struct ClusterInfo {
+    double Phi;
+    int Vol;
+    TIntV Nodes;
+};
 
-// Comparator must be outside the function
+// Comparator must be **after** the struct definition
 struct ClusterCmp {
-    bool operator()(const std::pair<double,TIntV>& a, const std::pair<double,TIntV>& b) const {
-        return a.first < b.first; // smallest phi survives
+    bool operator()(const ClusterInfo& a, const ClusterInfo& b) const {
+        return a.Phi < b.Phi; // smallest phi survives
     }
 };
 
 void SaveClustersToFile(const TLocClustStat& ClusStat, const TStr& OutFNm) {
     const TStr ClustFNm = TStr::Fmt("ncp.%s.perbin.clusters.tab", OutFNm.CStr());
     FILE* F = fopen(ClustFNm.CStr(), "wt");
-    fprintf(F, "#Bin\tSize\tPhi\tNodes\n");
+    fprintf(F, "#Bin\tSize\tVol\tPhi\tNodes\n");
 
+    // Pre-C++11 style: fill vector using push_back
     std::vector<std::pair<int,int> > SizeBins;
     SizeBins.push_back(std::make_pair(1,10));
     SizeBins.push_back(std::make_pair(11,50));
@@ -52,12 +59,7 @@ void SaveClustersToFile(const TLocClustStat& ClusStat, const TStr& OutFNm) {
 
     const int TopNPerBin = 20;
 
-    typedef std::priority_queue<
-        std::pair<double,TIntV>,
-        std::vector<std::pair<double,TIntV> >,
-        ClusterCmp
-    > ClusterHeap;
-
+    typedef std::priority_queue<ClusterInfo, std::vector<ClusterInfo>, ClusterCmp> ClusterHeap;
     std::vector<ClusterHeap> BinHeaps(SizeBins.size());
 
     // --- process all clusters ---
@@ -65,6 +67,7 @@ void SaveClustersToFile(const TLocClustStat& ClusStat, const TStr& OutFNm) {
         const TLocClustStat::TCutInfo& Cut = ClusStat.BestCutH[i];
         int sz = Cut.CutNIdV.Len();
         double phi = Cut.GetPhi();
+        int vol = Cut.GetVol();
         if (sz == 0) continue;
 
         // find bin
@@ -72,10 +75,10 @@ void SaveClustersToFile(const TLocClustStat& ClusStat, const TStr& OutFNm) {
             if (sz >= SizeBins[b].first && sz <= SizeBins[b].second) {
                 ClusterHeap& heap = BinHeaps[b];
                 if ((int)heap.size() < TopNPerBin) {
-                    heap.push(std::make_pair(phi, Cut.CutNIdV));
-                } else if (phi < heap.top().first) {
+                    heap.push((ClusterInfo){phi, vol, Cut.CutNIdV});
+                } else if (phi < heap.top().Phi) {
                     heap.pop();
-                    heap.push(std::make_pair(phi, Cut.CutNIdV));
+                    heap.push((ClusterInfo){phi, vol, Cut.CutNIdV});
                 }
                 break;
             }
@@ -86,12 +89,13 @@ void SaveClustersToFile(const TLocClustStat& ClusStat, const TStr& OutFNm) {
     for (size_t b=0; b<SizeBins.size(); b++) {
         ClusterHeap heapCopy = BinHeaps[b]; // copy to pop
         while (!heapCopy.empty()) {
-            const std::pair<double,TIntV>& cluster = heapCopy.top();
-            double phi = cluster.first;
-            const TIntV& NIdV = cluster.second;
+            const ClusterInfo& cluster = heapCopy.top();
+            double phi = cluster.Phi;
+            int vol = cluster.Vol;
+            const TIntV& NIdV = cluster.Nodes;
 
-            fprintf(F, "[%d-%d]\t%d\t%f\t",
-                SizeBins[b].first, SizeBins[b].second, NIdV.Len(), phi);
+            fprintf(F, "[%d-%d]\t%d\t%d\t%f\t",
+                SizeBins[b].first, SizeBins[b].second, NIdV.Len(), vol, phi);
             for (int n=0; n<NIdV.Len(); n++) {
                 fprintf(F, "%d ", (int)NIdV[n]);
             }

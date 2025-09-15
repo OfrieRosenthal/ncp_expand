@@ -382,7 +382,7 @@ In file included from ../../glib-core/base.h:183,
 ../../snap-core/gbase.h:222:22:   required from ‘void TSnapQueue<TVal>::Push(const TVal&) [with TVal = int]’
 ../../snap-core/cncom.h:361:34:   required from ‘void TSnap::GetWccs(const PGraph&, TCnComV&) [with PGraph = TPt<TUNGraph>; TCnComV = TVec<TCnCom>]’
 ../../snap-core/cncom.h:420:10:   required from ‘PGraph TSnap::GetMxWcc(const PGraph&) [with PGraph = TPt<TUNGraph>]’
-ncpplot.cpp:136:37:   required from here
+ncpplot.cpp:140:37:   required from here
 ../../glib-core/ds.h:799:27: warning: catching polymorphic type ‘class std::exception’ by value [-Wcatch-value=]
   799 |     catch (std::exception Ex){
       |                           ^~
