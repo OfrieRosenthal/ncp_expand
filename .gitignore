@@ -69,3 +69,7 @@ coverage.xml
 # Temporary files
 *.tmp
 *.swp
+
+# Ignore target folder
+target/
+snap/examples/ncpplot/log
