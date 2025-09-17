@@ -42,22 +42,19 @@ struct ClusterCmp {
     }
 };
 
-void SaveClustersToFile(const TLocClustStat& ClusStat, const TStr& OutFNm) {
+
+void SaveClustersToFile(const TLocClustStat& ClusStat, const TStr& OutFNm, int TopNPerBin) {
     const TStr ClustFNm = TStr::Fmt("ncp.%s.perbin.clusters.tab", OutFNm.CStr());
     FILE* F = fopen(ClustFNm.CStr(), "wt");
     fprintf(F, "#Bin\tSize\tVol\tPhi\tNodes\n");
 
-    // Pre-C++11 style: fill vector using push_back
+    // Size bins
     std::vector<std::pair<int,int> > SizeBins;
-    SizeBins.push_back(std::make_pair(1,10));
-    SizeBins.push_back(std::make_pair(11,50));
-    SizeBins.push_back(std::make_pair(51,100));
-    SizeBins.push_back(std::make_pair(101,500));
-    SizeBins.push_back(std::make_pair(501,1000));
-    SizeBins.push_back(std::make_pair(1001,5000));
-    SizeBins.push_back(std::make_pair(5001,INT_MAX));
-
-    const int TopNPerBin = 20;
+    SizeBins.push_back({1,50});
+    SizeBins.push_back({51,100});
+    SizeBins.push_back({101,1000});
+    SizeBins.push_back({1001,5000});
+    SizeBins.push_back({5001,INT_MAX});
 
     typedef std::priority_queue<ClusterInfo, std::vector<ClusterInfo>, ClusterCmp> ClusterHeap;
     std::vector<ClusterHeap> BinHeaps(SizeBins.size());
@@ -131,7 +128,10 @@ int main(int argc, char* argv[]) {
     const int KMin = Env.GetIfArgPrefixInt("-kmin:", 1000, "minimum K (volume)");
     const int KMax = Env.GetIfArgPrefixInt("-kmax:", Mega(100), "maximum K (volume)");
     const int Coverage = Env.GetIfArgPrefixInt("-c:", 10, "coverage");
+    int TopNPerBin = Env.GetIfArgPrefixInt("-topn:", 50, "Top N clusters per bin");
+
     TLocClust::Verbose = Env.GetIfArgPrefixBool("-v:", true, "Verbose output");
+    
 
     if (OutFNm.Empty()) { OutFNm = InFNm.GetFMid(); }
     if (Desc.Empty()) { Desc = OutFNm; }
@@ -169,7 +169,7 @@ int main(int argc, char* argv[]) {
     TLocClustStat ClusStat(Alpha, KMin, KMax, KFac, Coverage, SizeFrac);
     // ClusStat.Run(Graph, false, false, SaveInfo);  // run to populate BestCutH
     ClusStat.Run(Graph, false, false, true);  // run to populate BestCutH
-    SaveClustersToFile(ClusStat, OutFNm);
+    SaveClustersToFile(ClusStat, OutFNm, TopNPerBin);
 
 
     // const TStr ClustFNm = TStr::Fmt("ncp.%s.clusters.tab", OutFNm.CStr());
