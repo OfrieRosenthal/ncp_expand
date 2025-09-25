@@ -72,4 +72,14 @@ coverage.xml
 
 # Ignore target folder
 target/
+# Data / outputs
+datasets/
+*.edgelist
+*.tab
+*.plt
+*.png
+*.txt
 snap/examples/ncpplot/log
+# Compiled examples
+snap/examples/*/*main
+snap/examples/*/*
