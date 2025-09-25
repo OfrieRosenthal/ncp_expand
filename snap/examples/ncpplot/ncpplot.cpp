@@ -52,7 +52,8 @@ void SaveClustersToFile(const TLocClustStat& ClusStat, const TStr& OutFNm, int T
     std::vector<std::pair<int,int> > SizeBins;
     SizeBins.push_back({1,50});
     SizeBins.push_back({51,100});
-    SizeBins.push_back({101,1000});
+    SizeBins.push_back({101,500});
+    SizeBins.push_back({501,1000});
     SizeBins.push_back({1001,5000});
     SizeBins.push_back({5001,INT_MAX});
 

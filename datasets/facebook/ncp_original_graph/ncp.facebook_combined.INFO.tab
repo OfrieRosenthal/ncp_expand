@@ -1,0 +1,2 @@
+# Graph: ../facebook_combined.txt -> facebook_combined facebook_combined A=0.001, K=1000-1.5-100M, Cvr=10, SzFrc=0.001 G(3698, 85963)
+#N_inside	E_inside	E_across	Conductance	Expansion	IntDensity	CutRatio	NormCut	Mx_FracDegOut	Avg_FDO	Median_FDO	90Pct_FDO	Flake_FDO	Volume	ExpVolume	Modularity	ModRatio
