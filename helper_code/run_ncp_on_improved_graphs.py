@@ -20,7 +20,7 @@ def run_ncp(input_file, out_dir, ncpplot_path, method, budget, created_dirs):
         f"-i:{input_file_abs}",
         "-k",
         "-s",
-        "-topn:1"
+        "-topn:250"
         # -o removed
     ]
 

@@ -66,7 +66,7 @@ def main():
     G = nx.read_edgelist(args.graph, nodetype=int)
 
     # Add random edges
-    G, added_edges = add_random_edges_probabilistic(G, K=args.K, seed=args.seed)
+    G, added_edges = add_random_edges_probabilistic(G, K=args.K, seed=None)
     print(f"✅ Added {len(added_edges)} edges")
 
     # Save updated graph
